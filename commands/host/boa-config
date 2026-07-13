@@ -67,9 +67,8 @@ printf '%s' "${_host}"  | grep -qE '^[A-Za-z0-9._-]+$' || _die "BOA_HOST has inv
 printf '%s' "${_alias}" | grep -qE '^[A-Za-z0-9._-]+$' || _die "BOA_ALIAS has invalid characters."
 case "${_drush}" in drush|drush8) : ;; *) _drush="drush" ;; esac
 
-if ! ssh-add -l >/dev/null 2>&1; then
-  _die "no SSH identities loaded. Run 'ddev auth ssh' first."
-fi
+# Host commands ssh to the BOA server using your ~/.ssh keys directly; the DDEV
+# ssh-agent (ddev auth ssh) is only needed for `ddev pull boa`.
 
 # One allow-listed remote command; unescape JSON slashes for easy matching.
 _json="$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
