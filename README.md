@@ -49,10 +49,13 @@ ddev boa-config    # writes .ddev/config.boa.yaml, then:
 ddev restart
 ```
 
-`boa-config` queries the site once and sets your project's **PHP version**, **database
-type/version**, **Drupal project type** and **docroot** to match what BOA actually reports
-for the site (read from `drush @alias status`, so it stays in step with the site rather
-than being hand-copied). Review the generated `.ddev/config.boa.yaml` before restarting.
+`boa-config` queries the site once and sets your project's **PHP version**, **Drupal
+project type** and **docroot** to match what BOA actually reports for the site (read from
+`drush @alias status`, so it stays in step with the site rather than being hand-copied). It
+notes the site's database engine (Percona/MySQL) as a commented, opt-in suggestion — DDEV's
+default MariaDB imports BOA database dumps fine, so the database type is left unchanged to
+keep things working out of the box. Review the generated `.ddev/config.boa.yaml` before
+restarting.
 
 ## Use
 
