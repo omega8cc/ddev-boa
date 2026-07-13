@@ -37,9 +37,17 @@
 
 set -eu
 
-_user="$(ddev exec printenv BOA_SSH_USER 2>/dev/null | tr -d '\r')"
-_host="$(ddev exec printenv BOA_HOST 2>/dev/null | tr -d '\r')"
-_drush="$(ddev exec printenv BOA_DRUSH 2>/dev/null | tr -d '\r')"
+# Read the BOA_* settings from the provider recipe on the host (DDEV injects
+# provider environment_variables only during pull/push, not into the web
+# container's general environment, so `ddev exec printenv` would be empty here).
+_prov="${DDEV_APPROOT:-.}/.ddev/providers/boa.yaml"
+_boa_var() {
+  sed -n "s/^[[:space:]]*$1:[[:space:]]*//p" "${_prov}" 2>/dev/null | head -1 \
+    | sed "s/^[\"']//; s/[\"'][[:space:]]*$//; s/[[:space:]]*$//" | tr -d '\r'
+}
+_user="$(_boa_var BOA_SSH_USER)"
+_host="$(_boa_var BOA_HOST)"
+_drush="$(_boa_var BOA_DRUSH)"
 _drush="${_drush:-drush11}"
 
 if [ -z "${_user}" ] || [ -z "${_host}" ]; then
