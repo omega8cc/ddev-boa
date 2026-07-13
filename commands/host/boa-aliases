@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+## Description: List your BOA site's Drush aliases (helps you set BOA_ALIAS)
+## Usage: boa-aliases
+## Example: "ddev boa-aliases"
+## HostWorkingDir: false
+
+# Runs `drushNN aliases` on the BOA server through your limited shell so you can copy the
+# exact @alias into .ddev/providers/boa.yaml. Reads BOA_SSH_USER / BOA_HOST / BOA_DRUSH
+# from the project's web-container environment (they live in .ddev/providers/boa.yaml).
+
+set -eu
+
+_user="$(ddev exec printenv BOA_SSH_USER 2>/dev/null | tr -d '\r')"
+_host="$(ddev exec printenv BOA_HOST 2>/dev/null | tr -d '\r')"
+_drush="$(ddev exec printenv BOA_DRUSH 2>/dev/null | tr -d '\r')"
+_drush="${_drush:-drush11}"
+
+if [ -z "${_user}" ] || [ -z "${_host}" ]; then
+  echo "ddev-boa: set BOA_SSH_USER and BOA_HOST in .ddev/providers/boa.yaml first." >&2
+  exit 1
+fi
+
+# Reject anything that could inject an ssh option (leading '-') or extra remote tokens.
+printf '%s' "${_user}"  | grep -qE '^[A-Za-z0-9._-]+$' || { echo "ddev-boa: BOA_SSH_USER has invalid characters." >&2; exit 1; }
+printf '%s' "${_host}"  | grep -qE '^[A-Za-z0-9._-]+$' || { echo "ddev-boa: BOA_HOST has invalid characters." >&2; exit 1; }
+case "${_drush}" in drush|drush8|drush10|drush11) : ;; *) _drush="drush11" ;; esac
+
+if ! ssh-add -l >/dev/null 2>&1; then
+  echo "ddev-boa: no SSH identities loaded. Run 'ddev auth ssh' first." >&2
+  exit 1
+fi
+
+echo "# ${_drush} aliases on ${_user}@${_host}:"
+echo "# (use 'drush aliases' names with BOA_DRUSH=drush for legacy Drupal 6/7)"
+# 'drushNN aliases' is explicitly permitted by the BOA limited shell.
+ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+  "${_user}@${_host}" "${_drush} aliases"

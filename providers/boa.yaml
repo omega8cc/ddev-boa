@@ -1,0 +1,111 @@
+#ddev-generated
+# BOA hosting provider for `ddev pull boa`. Upload is intentionally NOT offered.
+#
+# Pulls the live database + user files from a BOA-hosted site entirely through the
+# client's normal limited (lshell/websh over mysecureshell) shell account. Code is never
+# pulled (it lives in git, per the DDEV provider contract). Requires the developer's SSH
+# key on their oN.ftp BOA account, forwarded into the web container by `ddev auth ssh`.
+#
+# WHY drush8 (`drush`): on BOA only the Ægir-integrated `drush` (== drush8) works WITH
+# site @aliases; `sql-dump` reads the site's DB credentials straight from the alias, so it
+# produces a correct dump for ANY Drupal version (6-11+) without booting Drupal. Standalone
+# `drush10`/`drush11` exist on BOA only to convert alias NAMES and return nothing useful
+# here; site-local `vdrush` is the modern path for updates but is unavailable over a
+# non-interactive ssh command (not in the shell's overssh set, needs the 'Unlock Local
+# Drush' Ægir task + a cd into the platform). So the pull uses `drush @alias` and nothing
+# else. See docs/DRUSH-CLI.md in boa-private.
+#
+# Note the alias-name form differs by Drush: drush8 `@sub.domain.top.org` is the same site
+# as drush10/11 `@sub-domain-top.org`. Use the drush8 (dotted) form here. `ddev boa-aliases`
+# lists them.
+#
+# Configure in .ddev/providers/boa.yaml (or .ddev/.env):
+#   BOA_SSH_USER   tenant shell account, e.g. o1.ftp
+#   BOA_HOST       BOA server hostname, e.g. server.example.com
+#   BOA_ALIAS      site Drush alias WITHOUT the leading @, drush8 (dotted) form
+#   BOA_DRUSH      drush | drush8            (default: drush; the only alias-integrated form)
+#   BOA_FILES_PATH optional absolute path to the site files dir (else auto-derived)
+
+environment_variables:
+  BOA_SSH_USER: ""
+  BOA_HOST: ""
+  BOA_ALIAS: ""
+  BOA_DRUSH: drush
+  BOA_FILES_PATH: ""
+
+auth_command:
+  command: |
+    set -eu
+    # --- validate all inputs before they reach an ssh destination or a remote command ---
+    # A leading '-' would be parsed by ssh as an option (ProxyCommand RCE); a space or shell
+    # metachar in the alias/user would inject extra remote drush verbs. Fail closed.
+    _die() { echo "ddev-boa: $1" >&2; exit 1; }
+    [ -n "${BOA_SSH_USER:-}" ] && [ -n "${BOA_HOST:-}" ] && [ -n "${BOA_ALIAS:-}" ] \
+      || _die "set BOA_SSH_USER, BOA_HOST and BOA_ALIAS (see .ddev/providers/boa.yaml)."
+    printf '%s' "${BOA_SSH_USER}" | grep -qE '^[A-Za-z0-9._-]+$' || _die "BOA_SSH_USER has invalid characters."
+    printf '%s' "${BOA_HOST}"     | grep -qE '^[A-Za-z0-9._-]+$' || _die "BOA_HOST has invalid characters."
+    printf '%s' "${BOA_ALIAS}"    | grep -qE '^[A-Za-z0-9._-]+$' || _die "BOA_ALIAS has invalid characters."
+    case "${BOA_DRUSH}" in drush|drush8) : ;; *) _die "BOA_DRUSH must be 'drush' or 'drush8'." ;; esac
+    if ! ssh-add -l >/dev/null 2>&1; then
+      _die "no SSH identities in the agent. Run 'ddev auth ssh' on the host first."
+    fi
+    # A cheap, always-allowed round trip proves auth + that the shell delegates exec to
+    # lshell (oN.ftp login shell is mysecureshell; exec reaches lshell via its Shell group).
+    _probe=$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+      "${BOA_SSH_USER}@${BOA_HOST}" "${BOA_DRUSH} @${BOA_ALIAS} status --pipe" 2>/dev/null || true)
+    printf '%s' "${_probe}" | grep -q '"root"' \
+      || _die "could not query '@${BOA_ALIAS}' via ${BOA_DRUSH} on ${BOA_HOST} (check BOA_ALIAS with 'ddev boa-aliases')."
+
+db_pull_command:
+  command: |
+    set -eu
+    _die() { echo "ddev-boa: $1" >&2; exit 1; }
+    printf '%s' "${BOA_ALIAS}" | grep -qE '^[A-Za-z0-9._-]+$' || _die "BOA_ALIAS has invalid characters."
+    case "${BOA_DRUSH}" in drush|drush8) : ;; *) _die "BOA_DRUSH must be 'drush' or 'drush8'." ;; esac
+    # Single remote command (';', '|', '$()' are forbidden by the shell): drush streams a
+    # gzipped dump of the site DB to stdout; the redirect is web-container-side.
+    ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+      "${BOA_SSH_USER}@${BOA_HOST}" "${BOA_DRUSH} @${BOA_ALIAS} sql-dump --gzip" \
+      > "/var/www/html/.ddev/.downloads/db.sql.gz"
+    # Validate INTEGRITY, not just size: a shell rejection prints plain text and exits 0,
+    # which would be captured as a non-empty but invalid "dump". gzip -t rejects that.
+    gzip -t "/var/www/html/.ddev/.downloads/db.sql.gz" 2>/dev/null \
+      || _die "captured DB dump is not valid gzip — check BOA_ALIAS / BOA_DRUSH (the shell may have rejected the command)."
+
+files_pull_command:
+  command: |
+    set -eu
+    _die() { echo "ddev-boa: $1" >&2; exit 1; }
+    printf '%s' "${BOA_ALIAS}" | grep -qE '^[A-Za-z0-9._-]+$' || _die "BOA_ALIAS has invalid characters."
+    _files="${BOA_FILES_PATH:-}"
+    if [ -n "${_files}" ]; then
+      # An explicit path must be absolute, dash-free and free of traversal/globs.
+      case "${_files}" in
+        -*|*..*|*'*'*|*'?'*|*' '*) _die "BOA_FILES_PATH is not a safe absolute path." ;;
+        /*) : ;;
+        *) _die "BOA_FILES_PATH must be an absolute path." ;;
+      esac
+    else
+      # Derive from the site alias. status --pipe returns JSON with absolute "root" and a
+      # relative "files" (sites/<uri>/files). NEVER fall back to root on an empty parse:
+      # rsyncing the docroot would pull code AND settings.php (live DB creds). Hard-fail.
+      _json=$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+        "${BOA_SSH_USER}@${BOA_HOST}" "${BOA_DRUSH} @${BOA_ALIAS} status --pipe" 2>/dev/null || true)
+      _root=$(printf '%s' "${_json}" | grep -o '"root"[^,}]*'  | head -1 | sed 's/.*: *"//; s/".*//; s#\\/#/#g')
+      _frel=$(printf '%s' "${_json}" | grep -o '"files"[^,}]*' | head -1 | sed 's/.*: *"//; s/".*//; s#\\/#/#g')
+      printf '%s' "${_root}" | grep -qE '^/'                 || _die "could not determine site root; set BOA_FILES_PATH."
+      printf '%s' "${_frel}" | grep -qE '^sites/[^/]+/files$' || _die "could not determine files path; set BOA_FILES_PATH."
+      _files="${_root}/${_frel}"
+    fi
+    mkdir -p "/var/www/html/.ddev/.downloads/files"
+    # rsync-over-ssh (rsync is in the shell's overssh set). -L dereferences BOA's native
+    # files-symlinks so real content lands locally; -s/--protect-args stops remote
+    # word-splitting/globbing of the path. Read-only pull.
+    rsync -rLptz -s --no-perms --no-owner --no-group \
+      -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new" \
+      "${BOA_SSH_USER}@${BOA_HOST}:${_files}/" \
+      "/var/www/html/.ddev/.downloads/files/"
+    # A wrong-but-existing path (or unreadable files) rsyncs 0 files with rc=0; warn.
+    if ! find "/var/www/html/.ddev/.downloads/files" -mindepth 1 -print -quit | grep -q .; then
+      echo "ddev-boa: WARNING — no files were transferred (empty files dir, or the account cannot read ${_files})." >&2
+    fi

@@ -1,0 +1,38 @@
+#ddev-generated
+# ddev-boa — make a DDEV project pull its database + files from a BOA-hosted site
+# through the client's normal limited (lshell) shell account.
+#
+# Install:  ddev add-on get omega8cc/ddev-boa
+# Then set BOA_SSH_USER / BOA_HOST / BOA_ALIAS (see .ddev/providers/boa.yaml),
+# run `ddev auth ssh`, and `ddev pull boa`.
+
+name: ddev-boa
+
+# DDEV's provider + add-on machinery this relies on (per-project providers dir,
+# env-var provider recipes). Keep conservative; bump only when a newer feature is used.
+ddev_version_constraint: ">= v1.24.0"
+
+pre_install_actions: []
+
+project_files:
+  - providers/boa.yaml
+  - commands/host/boa-aliases
+  - commands/host/boa-config
+
+global_files: []
+
+post_install_actions:
+  - |
+    #ddev-nodisplay
+    echo "ddev-boa installed."
+    echo "Next:"
+    echo "  1. Edit .ddev/providers/boa.yaml — set BOA_SSH_USER, BOA_HOST, BOA_ALIAS."
+    echo "     Find the alias with:  ddev boa-aliases"
+    echo "  2. ddev auth ssh          # forward your BOA SSH key into the web container"
+    echo "  3. ddev boa-config        # (optional) match PHP/DB/type to the site, then: ddev restart"
+    echo "  4. ddev pull boa          # pulls DB + files (never code)"
+
+removal_actions:
+  - |
+    #ddev-nodisplay
+    echo "ddev-boa removed. Your project code and git history are untouched."
