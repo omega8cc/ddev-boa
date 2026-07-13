@@ -5,6 +5,32 @@
 ## Example: "ddev boa-aliases"
 ## HostWorkingDir: false
 
+###----------------------------------------###
+###
+###  ddev-boa  —  list a BOA site's Drush aliases
+###
+###  Copyright (C) 2009-2026 Omega8.cc
+###  noc@omega8.cc www.omega8.cc
+###
+###  This program is free software. You can
+###  redistribute it and/or modify it under
+###  the terms of the GNU GPL as published by
+###  the Free Software Foundation, version 2
+###  or later.
+###
+###  This program is distributed in the hope
+###  that it will be useful, but WITHOUT ANY
+###  WARRANTY; without even the implied
+###  warranty of MERCHANTABILITY or FITNESS
+###  FOR A PARTICULAR PURPOSE. See the GNU GPL
+###  for more details.
+###
+###  You should have received a copy of the
+###  GNU GPL along with this program.
+###  If not, see http://www.gnu.org/licenses/
+###
+###----------------------------------------###
+
 # Runs `drushNN aliases` on the BOA server through your limited shell so you can copy the
 # exact @alias into .ddev/providers/boa.yaml. Reads BOA_SSH_USER / BOA_HOST / BOA_DRUSH
 # from the project's web-container environment (they live in .ddev/providers/boa.yaml).

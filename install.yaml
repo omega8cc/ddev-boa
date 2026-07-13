@@ -1,4 +1,8 @@
 #ddev-generated
+#
+# Copyright (C) 2009-2026 Omega8.cc — noc@omega8.cc www.omega8.cc
+# Free software under the GNU GPL, version 2 or later.
+#
 # ddev-boa — make a DDEV project pull its database + files from a BOA-hosted site
 # through the client's normal limited (lshell) shell account.
 #

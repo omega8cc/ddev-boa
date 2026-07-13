@@ -1,4 +1,8 @@
 #ddev-generated
+#
+# Copyright (C) 2009-2026 Omega8.cc — noc@omega8.cc www.omega8.cc
+# Free software under the GNU GPL, version 2 or later.
+#
 # BOA hosting provider for `ddev pull boa`. Upload is intentionally NOT offered.
 #
 # Pulls the live database + user files from a BOA-hosted site entirely through the

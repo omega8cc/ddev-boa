@@ -100,3 +100,8 @@ are stock, not BOA's own compiled builds. Per-site php.ini tuning and BOA's ngin
 directives are not exported (they aren't readable through the limited shell); behaviours
 that depend on BOA's compiled modules will differ. This is honest **config + data**
 parity, not a certification of BOA's stack.
+
+## License
+
+Copyright (C) 2009-2026 Omega8.cc. Free software under the GNU GPL, version 2 or
+later — the same license as BOA itself.
