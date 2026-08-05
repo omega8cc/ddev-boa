@@ -104,11 +104,21 @@ files_pull_command:
     mkdir -p "/var/www/html/.ddev/.downloads/files"
     # rsync-over-ssh (rsync is in the shell's overssh set). -L dereferences BOA's native
     # files-symlinks so real content lands locally; -s/--protect-args stops remote
-    # word-splitting/globbing of the path. Read-only pull.
+    # word-splitting/globbing of the path. Read-only pull. With -L, one dangling
+    # symlink in the site files store makes rsync exit 23 (partial transfer) after
+    # everything else landed; under set -e that would fail the whole pull, so
+    # tolerate 23/24 with a loud warning and die on anything else.
+    _rc=0
     rsync -rLptz -s --no-perms --no-owner --no-group \
       -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new" \
       "${BOA_SSH_USER}@${BOA_HOST}:${_files}/" \
-      "/var/www/html/.ddev/.downloads/files/"
+      "/var/www/html/.ddev/.downloads/files/" || _rc=$?
+    if [ "${_rc}" != 0 ] && [ "${_rc}" != 23 ] && [ "${_rc}" != 24 ]; then
+      _die "rsync failed (rc=${_rc})."
+    fi
+    if [ "${_rc}" != 0 ]; then
+      echo "ddev-boa: WARNING — some entries were skipped (rc=${_rc}); likely a dangling symlink in the site files store." >&2
+    fi
     # A wrong-but-existing path (or unreadable files) rsyncs 0 files with rc=0; warn.
     if ! find "/var/www/html/.ddev/.downloads/files" -mindepth 1 -print -quit | grep -q .; then
       echo "ddev-boa: WARNING — no files were transferred (empty files dir, or the account cannot read ${_files})." >&2
