@@ -48,7 +48,7 @@ _boa_var() {
 _user="$(_boa_var BOA_SSH_USER)"
 _host="$(_boa_var BOA_HOST)"
 _drush="$(_boa_var BOA_DRUSH)"
-_drush="${_drush:-drush11}"
+_drush="${_drush:-drush}"
 
 if [ -z "${_user}" ] || [ -z "${_host}" ]; then
   echo "ddev-boa: set BOA_SSH_USER and BOA_HOST in .ddev/providers/boa.yaml first." >&2
@@ -58,13 +58,13 @@ fi
 # Reject anything that could inject an ssh option (leading '-') or extra remote tokens.
 printf '%s' "${_user}"  | grep -qE '^[A-Za-z0-9._-]+$' || { echo "ddev-boa: BOA_SSH_USER has invalid characters." >&2; exit 1; }
 printf '%s' "${_host}"  | grep -qE '^[A-Za-z0-9._-]+$' || { echo "ddev-boa: BOA_HOST has invalid characters." >&2; exit 1; }
-case "${_drush}" in drush|drush8|drush10|drush11) : ;; *) _drush="drush11" ;; esac
+case "${_drush}" in drush|drush8|drush10|drush11) : ;; *) _drush="drush" ;; esac
 
 # Host commands ssh to the BOA server using your ~/.ssh keys directly; the DDEV
 # ssh-agent (ddev auth ssh) is only needed for `ddev pull boa`.
 
 echo "# ${_drush} aliases on ${_user}@${_host}:"
-echo "# (use 'drush aliases' names with BOA_DRUSH=drush for legacy Drupal 6/7)"
+echo "# (copy the name exactly as listed; the pull accepts BOA_DRUSH=drush or drush8 only)"
 # 'drushNN aliases' is explicitly permitted by the BOA limited shell.
 ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
   "${_user}@${_host}" "${_drush} aliases"

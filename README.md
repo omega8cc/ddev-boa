@@ -31,12 +31,11 @@ Edit `.ddev/providers/boa.yaml` (or set these in `.ddev/.env`):
 |---|---|---|
 | `BOA_SSH_USER` | your tenant shell account | `o1.ftp` |
 | `BOA_HOST` | your BOA server hostname | `server.example.com` |
-| `BOA_ALIAS` | the site's Drush alias, no `@` | `mysite-com` |
-| `BOA_DRUSH` | `drush11` (default) or `drush`/`drush8` for Drupal 6/7 | `drush11` |
+| `BOA_ALIAS` | the site's Drush alias, no `@` | `mysite.com` |
+| `BOA_DRUSH` | `drush` (default) or `drush8` — the classic Drush that carries the aliases | `drush` |
 | `BOA_FILES_PATH` | optional; auto-discovered if empty | |
 
-Find the exact alias name (drush8 and drush10/11 alias names differ — dots become hyphens
-except the last extension):
+Find the exact alias name:
 
 ```bash
 ddev boa-aliases
