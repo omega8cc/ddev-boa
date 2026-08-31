@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+#ddev-generated
 
 ## Description: List your BOA site's Drush aliases (helps you set BOA_ALIAS)
 ## Usage: boa-aliases

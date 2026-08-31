@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+#ddev-generated
 
 ## Description: Generate DDEV config to match your BOA site (PHP version, DB, type, docroot)
 ## Usage: boa-config
