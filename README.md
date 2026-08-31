@@ -1,5 +1,7 @@
 # ddev-boa
 
+[![tests](https://github.com/omega8cc/ddev-boa/actions/workflows/tests.yml/badge.svg)](https://github.com/omega8cc/ddev-boa/actions/workflows/tests.yml)
+
 Pull your **BOA-hosted** site's database and files into a local
 [DDEV](https://ddev.com) project — through your normal BOA limited-shell account, with no
 extra credentials and no changes on the server.
